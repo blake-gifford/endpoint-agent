@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"main/platform"
@@ -22,21 +23,31 @@ type Request struct {
 	Headers Headers `json:"headers"`
 }
 
+type Flag struct {
+	Token string
+	OrgId int
+}
+
 var URL string
 
 func send(data Data) error {
+	flags := Flag{}
 	url := URL
 	if url == "" {
 		return fmt.Errorf("URL is required but not set")
 	}
+
+	flag.StringVar(&flags.Token, "token", "", "Auth Token")
+	flag.IntVar(&flags.OrgId, "orgId", 0, "Organization ID")
+	flag.Parse()
 
 	client := &http.Client{}
 
 	request := Request{
 		Data: data,
 		Headers: Headers{
-			OrganizationId: 1,
-			Authorization:  "Bearer your-token",
+			OrganizationId: flags.OrgId,
+			Authorization:  flags.Token,
 		},
 	}
 
