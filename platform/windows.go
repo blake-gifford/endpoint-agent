@@ -7,7 +7,7 @@ import (
 )
 
 func Run() (Data, error) {
-	response, err := Execute("./binaries/windows/osqueryi")
+	response, err := Execute("./binaries/windows/osqueryi.exe")
 	if err != nil {
 		return Data{}, fmt.Errorf("error has occurred %v", err)
 	}
