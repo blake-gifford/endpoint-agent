@@ -1,11 +1,18 @@
 package platform
 
-var queryInstalledSoftwareFallbacks = []string{
-	`SELECT name, version FROM deb_packages;`,
-	`SELECT name, bundle_version as version FROM apps;`,
-}
+var (
+	queryInstalledSoftwareFallbacks = []string{
+		`SELECT name, bundle_version as version FROM apps WHERE name IS NOT NULL AND bundle_version IS NOT NULL AND name != '' AND bundle_version != '';`,
+		`SELECT name, version FROM chrome_extensions WHERE name IS NOT NULL AND version IS NOT NULL AND name != '' AND version != '';`,
+		`SELECT name, version FROM firefox_addons WHERE name IS NOT NULL AND version IS NOT NULL AND name != '' AND version != '';`,
+		`SELECT name, version FROM ie_extensions WHERE name IS NOT NULL AND version IS NOT NULL AND name != '' AND version != '';`,
+		`SELECT name, version FROM deb_packages WHERE name IS NOT NULL AND version IS NOT NULL AND name != '' AND version != '';`,
+		`SELECT name, version FROM rpm_packages WHERE name IS NOT NULL AND version IS NOT NULL AND name != '' AND version != '';`,
+		`SELECT name, version FROM yum_packages WHERE name IS NOT NULL AND version IS NOT NULL AND name != '' AND version != '';`,
+		`SELECT name, version FROM programs WHERE name IS NOT NULL AND version IS NOT NULL AND name != '' AND version != '';`,
+	}
 
-var querySystemInfo = `
+	querySystemInfo = `
 		SELECT 
 			hostname, 
 			computer_name as name, 
@@ -15,3 +22,4 @@ var querySystemInfo = `
 		FROM 
 			system_info;
 	`
+)
