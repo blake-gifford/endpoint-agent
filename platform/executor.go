@@ -8,39 +8,46 @@ import (
 
 func query(query string, binaryPath string) ([]byte, error) {
 	cmd := exec.Command(binaryPath, "--json", query)
-	output, err := cmd.CombinedOutput()
+	output, err := cmd.Output()
 
 	if err != nil {
-		return nil, fmt.Errorf("error executing binary: %v\nOutput: %s", err, output)
+		return nil, fmt.Errorf("error executing binary: %v", err)
 	}
 
 	return output, nil
 }
 
 func queryWithFallbacks(queries []string, binaryPath string) ([]byte, error) {
-	var lastErr error
+	var allResults []map[string]any
+	var hasSuccessfulQuery bool
 
-	for i, queryStr := range queries {
+	for _, queryStr := range queries {
 		output, err := query(queryStr, binaryPath)
 		if err != nil {
-			lastErr = err
 			continue
 		}
 
-		var result []map[string]interface{}
+		var result []map[string]any
 		if err := json.Unmarshal(output, &result); err != nil {
-			lastErr = fmt.Errorf("invalid JSON from query %d: %v", i+1, err)
 			continue
 		}
 
 		if len(result) > 0 {
-			return output, nil
+			allResults = append(allResults, result...)
+			hasSuccessfulQuery = true
 		}
-
-		lastErr = fmt.Errorf("query %d returned no data", i+1)
 	}
 
-	return nil, fmt.Errorf("all queries failed, last error: %v", lastErr)
+	if !hasSuccessfulQuery {
+		return json.Marshal([]map[string]any{})
+	}
+
+	combinedOutput, err := json.Marshal(allResults)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling combined results: %v", err)
+	}
+
+	return combinedOutput, nil
 }
 
 func Execute(binaryPath string) (Data, error) {
