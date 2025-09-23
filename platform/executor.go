@@ -1,84 +1,67 @@
 package platform
 
 import (
-	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 )
 
-func query(query string, binaryPath string) ([]byte, error) {
-	cmd := exec.Command(binaryPath, "--json", query)
-	output, err := cmd.Output()
+var osqueryProcess *os.Process
 
-	if err != nil {
-		return nil, fmt.Errorf("error executing binary: %v", err)
+func startOsqueryDaemon(binaryPath string, configPath string) error {
+	token := os.Getenv("TOKEN")
+	organization := os.Getenv("ORGANIZATION")
+
+	if token == "" || organization == "" {
+		return fmt.Errorf("TOKEN and ORGANIZATION environment variables must be set")
 	}
 
-	return output, nil
+	// endpoint := fmt.Sprintf("webhook.site/827c08bd-5c47-457a-88b4-15e34285c7c6?authorization=%s&organization=%s", token, organization)
+	endpoint := fmt.Sprintf("29aeebc790eb.ngrok-free.app/agent?authorization=%s&organization=%s", token, organization)
+
+	cmd := exec.Command("sudo", binaryPath,
+		"--allow_unsafe=true",
+		"--logger_plugin=tls",
+		"--disable_enrollment=true",
+		"--logger_tls_endpoint="+endpoint,
+		"--tls_server_certs=./certs/certs.pem",
+		"--database_path=/tmp/osquery.db",
+		"--config_path="+configPath,
+		"--disable_database=true",
+		"--disable_caching=true",
+		"--disable_events=true",
+		"--logger_min_status=1",
+		"--disable_audit=true",
+		"--config_refresh=1",
+		"--json",
+	)
+
+	err := cmd.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start osqueryd daemon: %v", err)
+	}
+
+	osqueryProcess = cmd.Process
+	return nil
 }
 
-func queryWithFallbacks(queries []string, binaryPath string) ([]byte, error) {
-	var allResults []map[string]any
-	var hasSuccessfulQuery bool
-
-	for _, queryStr := range queries {
-		output, err := query(queryStr, binaryPath)
-		if err != nil {
-			continue
-		}
-
-		var result []map[string]any
-		if err := json.Unmarshal(output, &result); err != nil {
-			continue
-		}
-
-		if len(result) > 0 {
-			allResults = append(allResults, result...)
-			hasSuccessfulQuery = true
-		}
+func StopOsqueryDaemon() error {
+	if osqueryProcess != nil {
+		fmt.Printf("Killing osquery process PID: %d\n", osqueryProcess.Pid)
+		err := osqueryProcess.Kill()
+		osqueryProcess = nil
+		return err
 	}
 
-	if !hasSuccessfulQuery {
-		return json.Marshal([]map[string]any{})
-	}
-
-	combinedOutput, err := json.Marshal(allResults)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling combined results: %v", err)
-	}
-
-	return combinedOutput, nil
+	exec.Command("sudo", "pkill", "-f", "osqueryd").Run()
+	return nil
 }
 
-func Execute(binaryPath string) (Data, error) {
-	softwareOutput, err := queryWithFallbacks(queryInstalledSoftwareFallbacks, binaryPath)
+func Execute(binaryPath string) error {
+	err := startOsqueryDaemon(binaryPath, "./osquery.conf")
 	if err != nil {
-		return Data{}, fmt.Errorf("error querying software: %v", err)
+		return fmt.Errorf("error starting osqueryd daemon: %v", err)
 	}
 
-	var software []Software
-	if err := json.Unmarshal(softwareOutput, &software); err != nil {
-		return Data{}, fmt.Errorf("error parsing software JSON: %v", err)
-	}
-
-	systemOutput, err := query(querySystemInfo, binaryPath)
-	if err != nil {
-		return Data{}, fmt.Errorf("error querying system info: %v", err)
-	}
-
-	var systemInfoArray []System
-	if err := json.Unmarshal(systemOutput, &systemInfoArray); err != nil {
-		return Data{}, fmt.Errorf("error parsing system JSON: %v", err)
-	}
-
-	if len(systemInfoArray) == 0 {
-		return Data{}, fmt.Errorf("no system information returned from query")
-	}
-
-	systemInfo := systemInfoArray[0]
-
-	return Data{
-		Software:   software,
-		SystemInfo: systemInfo,
-	}, nil
+	return nil
 }

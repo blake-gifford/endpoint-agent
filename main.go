@@ -1,92 +1,37 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"main/platform"
-	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
-type Data = platform.Data
+func main() {
+	var token string
+	var organization int
 
-type Headers struct {
-	OrganizationId int    `json:"organizationId"`
-	Authorization  string `json:"authorization"`
-}
-
-type Request struct {
-	Data    Data    `json:"data"`
-	Headers Headers `json:"headers"`
-}
-
-type Flag struct {
-	Token string
-	OrgId int
-}
-
-var URL string
-
-func send(data Data) error {
-	flags := Flag{}
-	url := URL
-	if url == "" {
-		return fmt.Errorf("URL is required but not set")
-	}
-
-	flag.StringVar(&flags.Token, "token", "", "Auth Token")
-	flag.IntVar(&flags.OrgId, "orgId", 0, "Organization ID")
+	flag.StringVar(&token, "token", "", "Auth Token")
+	flag.IntVar(&organization, "organization", 0, "Organization ID")
 	flag.Parse()
 
-	client := &http.Client{}
+	os.Setenv("TOKEN", token)
+	os.Setenv("ORGANIZATION", fmt.Sprintf("%d", organization))
 
-	request := Request{
-		Data: data,
-		Headers: Headers{
-			OrganizationId: flags.OrgId,
-			Authorization:  flags.Token,
-		},
-	}
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		log.Println("Stopping osqueryd daemon...")
+		platform.StopOsqueryDaemon()
+		os.Exit(0)
+	}()
 
-	jsonData, err := json.Marshal(request)
-	if err != nil {
-		return fmt.Errorf("error marshaling request: %w", err)
-	}
+	platform.Run()
+	log.Printf("osqueryd daemon started successfully")
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("error creating request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error sending request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("HTTP request failed with status %d", resp.StatusCode)
-	}
-
-	return nil
-}
-
-func main() {
-	data, err := platform.Run()
-	if err != nil {
-		log.Printf("Failed to execute platform: %v", err)
-		os.Exit(1)
-	}
-
-	if err := send(data); err != nil {
-		log.Printf("Failed to send data: %v", err)
-		os.Exit(1)
-	}
-
-	log.Printf("Data sent successfully")
+	select {}
 }

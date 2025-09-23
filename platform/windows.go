@@ -6,11 +6,10 @@ import (
 	"fmt"
 )
 
-func Run() (Data, error) {
-	response, err := Execute("./binaries/windows/osqueryi.exe")
+func Run() error {
+	err := Execute("./binaries/windows/osqueryd.exe")
 	if err != nil {
-		return Data{}, fmt.Errorf("error has occurred %v", err)
+		return fmt.Errorf("error has occurred %v", err)
 	}
-
-	return response, nil
+	return nil
 }

@@ -1,7 +1,7 @@
 set quiet
 
-run:
-  go run main.go
+build:
+  go build 
 
-build url="https://webhook.site/85cae907-8b39-456f-99be-5947b10fcad8":
-  go build -ldflags "-X main.URL={{url}}"
+run: 
+  ./main -token="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTg2NTMzMjUsImV4cCI6MTc1ODY5NjUyNSwiYXVkIjoiYWNjZXNzIiwic3ViIjoiMSJ9.AY3US5zcq2HLSdxzlEQyAs8tf3zaMRE6kQzD32DluPkFHYHUavb4G9EV9DwU86DDm_4NjnWVVdcDg7RRttSqXjM2YZWgPxmd5WQYpMGHknFn6FJjeRVwJgZr8wDKeOtguJT6n55ME6fLi73mQiKik52FpMJDygqmn41fPFq9ifGj758G5XlQjKoBM4DKZHi-v9ReQMS0ADUnK2gKTbzDiQVhVI4O8Y6fP1MInkPtSjW6OW7TQbbvp3b4lKaGIHEFXjh0-X5pds0ozKnTia5mziyTHLx4LRq7y_tLokMVhB-TSObW30HBGdvixgCBqsBZMNH9b0ODPI7EQubeOMAGJA" -organization=1

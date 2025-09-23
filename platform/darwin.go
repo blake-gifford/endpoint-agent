@@ -6,11 +6,10 @@ import (
 	"fmt"
 )
 
-func Run() (Data, error) {
-	response, err := Execute("./binaries/darwin/osqueryi")
+func Run() error {
+	err := Execute("./binaries/darwin/lib/osquery.app/Contents/MacOS/osqueryd")
 	if err != nil {
-		return Data{}, fmt.Errorf("error has occurred %o", err)
+		return fmt.Errorf("error has occurred %v", err)
 	}
-
-	return response, nil
+	return nil
 }
