@@ -16,7 +16,6 @@ func startOsqueryDaemon(binaryPath string, configPath string) error {
 		return fmt.Errorf("TOKEN and ORGANIZATION environment variables must be set")
 	}
 
-	// endpoint := fmt.Sprintf("webhook.site/827c08bd-5c47-457a-88b4-15e34285c7c6?authorization=%s&organization=%s", token, organization)
 	endpoint := fmt.Sprintf("29aeebc790eb.ngrok-free.app/agent?authorization=%s&organization=%s", token, organization)
 
 	cmd := exec.Command("sudo", binaryPath,
